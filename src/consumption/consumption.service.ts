@@ -192,10 +192,25 @@ export class ConsumptionService {
   }
 
   createAll(consumptions: CreateConsumptionDto[]) {
-    const entities: Consumption[] = consumptions.map(consumption =>
-      this.consumptionRepository.create(consumption)
-    );
+    const entities: Consumption[] = consumptions.map(consumption => {
+      this.deleteExistentConsumptions(consumption);
+
+      return this.consumptionRepository.create(consumption);
+    });
 
     return this.consumptionRepository.save(entities);
+  }
+
+  private deleteExistentConsumptions(consumption: CreateConsumptionDto) {
+    if (!consumption.date || consumption.hour == null || consumption.energy == null) {
+      throw new BadRequestException("Invalid consumption data");
+    }
+    const date = new Date(consumption.date);
+
+    if (!DateHelper.isValidDate(date)) {
+      throw new BadRequestException("Invalid date");
+    }
+
+    this.consumptionRepository.delete({ date, hour: consumption.hour });
   }
 }
