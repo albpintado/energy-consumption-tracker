@@ -1,7 +1,11 @@
 import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
+import { PeriodsPower } from "src/common/types/global";
 import { DiscountService } from "src/discount/discount.service";
+import { Discount } from "src/discount/entities/discount.entity";
 import { DateHelper } from "src/helpers/date.helper";
+import { EnergyPeriodsHelper } from "src/helpers/energy-periods.helper";
+import { Rate } from "src/rate/entities/rate.entity";
 import { RateService } from "src/rate/rate.service";
 import { Between, Repository } from "typeorm";
 import { CreateConsumptionDto } from "./dto/create-consumption.dto";
@@ -16,111 +20,120 @@ export class ConsumptionService {
     private discountService: DiscountService
   ) {}
 
-  getDailyConsumption(date: string) {
-    return this.consumptionRepository.find({
+  async getDailyConsumption(date: string) {
+    const consumptions = await this.consumptionRepository.find({
       where: { date: new Date(date) },
     });
+
+    const dailyConsumption: number = consumptions.reduce((acc, curr) => {
+      return acc + parseFloat(curr.energy.toString());
+    }, 0);
+
+    return { date, energy: parseFloat(dailyConsumption.toFixed(3)) };
   }
 
   async getMonthlyConsumption(date: string) {
+    const { startDate, endDate } = DateHelper.getMonthRange(date);
+    const month = DateHelper.getMonthName(startDate.getMonth());
+
     const consumptions = await this.consumptionRepository.find({
-      where: { date: new Date(date) },
+      where: { date: Between(startDate, endDate) },
     });
 
     const monthlyConsumption: number = consumptions.reduce((acc, curr) => {
       return acc + parseFloat(curr.energy.toString());
     }, 0);
-    return { date, energy: monthlyConsumption };
+    return { month, energy: parseFloat(monthlyConsumption.toFixed(3)) };
   }
 
-  async getExpenses(date: string) {
+  async getMonthlyCost(date: string) {
     const { startDate, endDate } = DateHelper.getMonthRange(date);
+    const daysBetween = DateHelper.getDaysBetween(startDate, endDate);
 
     const consumptions = await this.consumptionRepository.find({
       where: {
         date: Between(startDate, endDate),
       },
     });
-
-    const periodsHours = {
-      peak: [
-        {
-          start: 10,
-          end: 14,
-        },
-        {
-          start: 16,
-          end: 22,
-        },
-      ],
-      standard: [
-        {
-          start: 8,
-          end: 10,
-        },
-        {
-          start: 14,
-          end: 16,
-        },
-        {
-          start: 22,
-          end: 0,
-        },
-      ],
-      offPeak: [
-        {
-          start: 0,
-          end: 8,
-        },
-      ],
-    };
+    const contractedPower = { peak: 3.2, standard: 3.2, offPeak: 3.2 };
 
     const rate = await this.rateService.findByName("Sun Club");
     const discount = await this.discountService.findByRate(rate.id);
-
-    const expense = consumptions.reduce((acc, curr) => {
-      // 1. Get period from current hour
-      const currentHour = curr.hour;
-      const period = Object.keys(periodsHours).find(period => {
-        return periodsHours[period].some(range => {
-          return currentHour >= range.start && currentHour < range.end;
-        });
-      });
-
-      // 2. Multiply by period price
-      const periodPrice =
-        period === "peak"
-          ? rate.peakEnergyPrice
-          : period === "standard"
-          ? rate.standardEnergyPrice
-          : rate.offPeakEnergyPrice;
-      const consumptionCost = curr.energy * periodPrice;
-
-      // 3. Apply discount if applicable
-      const finalCost = (consumptionCost * discount.percentage) / 100;
-
-      // 4. Add to accumulator
-      acc += finalCost;
-
-      // 5. Return accumulator
-      return acc;
-    }, 0);
-
-    // Get difference of days between startDate and endDate
-    const invoiceDays =
-      (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24);
-    const peakPowerCost = 3.2 * (rate.peakPowerPrice || 0) * invoiceDays;
-    const standardPowerCost =
-      3.2 * (rate.standardPowerPrice || 0) * invoiceDays;
-    const offPeakPowerCost = 3.2 * (rate.offPeakPowerPrice || 0) * invoiceDays;
-    const powerCost = parseFloat(
-      (peakPowerCost + standardPowerCost + offPeakPowerCost).toFixed(2)
-    );
-
-    const energyCost = parseFloat(expense.toFixed(2));
+    const energyCost = this.getConsumptionTotalCost(consumptions, rate, discount);
+    const powerCost = this.getPowerCost(contractedPower, rate, daysBetween);
 
     return { date, energyCost, powerCost };
   }
+
+  private getConsumptionTotalCost = (
+    consumptions: Consumption[],
+    rate: Rate,
+    discount: Discount
+  ): number => {
+    const rawCost = consumptions.reduce(
+      (acc, consumption) => acc + this.getConsumptionAfterDiscountCost(consumption, rate, discount),
+      0
+    );
+
+    return parseFloat(rawCost.toFixed(2));
+  };
+
+  private getConsumptionAfterDiscountCost = (
+    consumption: Consumption,
+    rate: Rate,
+    discount: Discount
+  ) => {
+    const currentHour = consumption.hour;
+
+    const period = EnergyPeriodsHelper.getPeriodByHour(currentHour);
+    const periodPrice = this.getPeriodPrice(period, rate);
+
+    const baseCost = consumption.energy * periodPrice;
+    const discountCost = baseCost - (baseCost * discount.percentage) / 100;
+
+    return baseCost - discountCost;
+  };
+
+  private getPeriodPrice = (period: string, rate: Rate): number => {
+    switch (period) {
+      case "peak":
+        return rate.peakEnergyPrice;
+      case "standard":
+        return rate.standardEnergyPrice;
+      case "offPeak":
+        return rate.offPeakEnergyPrice;
+      default:
+        throw new Error(`Unknown period: ${period}`);
+    }
+  };
+
+  private getPowerCost = (periodsPower: PeriodsPower, rate: Rate, daysBetween: number): number => {
+    const peakPowerCost = this.getPeriodPowerCost(
+      periodsPower.peak,
+      rate.peakPowerPrice,
+      daysBetween
+    );
+    const standardPowerCost = this.getPeriodPowerCost(
+      periodsPower.standard,
+      rate.standardPowerPrice,
+      daysBetween
+    );
+    const offPeakPowerCost = this.getPeriodPowerCost(
+      periodsPower.offPeak,
+      rate.offPeakPowerPrice,
+      daysBetween
+    );
+
+    return parseFloat((peakPowerCost + standardPowerCost + offPeakPowerCost).toFixed(2));
+  };
+
+  private getPeriodPowerCost = (
+    power: number,
+    periodPowerPrice: number,
+    daysBetween: number
+  ): number => {
+    return power * (periodPowerPrice || 0) * daysBetween;
+  };
 
   create(createConsumptionDto: CreateConsumptionDto) {
     const consumption = new Consumption();

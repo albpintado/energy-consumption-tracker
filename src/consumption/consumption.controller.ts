@@ -17,8 +17,8 @@ export class ConsumptionController {
   }
 
   @Get("/expenses/:date/monthly")
-  getExpenses(@Param("date") date: string) {
-    return this.consumptionService.getExpenses(date);
+  getMonthlyCost(@Param("date") date: string) {
+    return this.consumptionService.getMonthlyCost(date);
   }
 
   @Post()
