@@ -61,8 +61,9 @@ export class ConsumptionService {
     const discount = await this.discountService.findByRate(rate.id);
     const energyCost = this.getConsumptionTotalCost(consumptions, rate, discount);
     const powerCost = this.getPowerCost(contractedPower, rate, daysBetween);
+    const totalCost = parseFloat((energyCost + powerCost).toFixed(2));
 
-    return { date, energyCost, powerCost };
+    return { date, energyCost, powerCost, totalCost };
   }
 
   private getConsumptionTotalCost = (
