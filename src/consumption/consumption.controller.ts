@@ -1,10 +1,25 @@
-import { Body, Controller, HttpCode, Post } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, Param, Post } from "@nestjs/common";
 import { ConsumptionService } from "./consumption.service";
 import { CreateConsumptionDto } from "./dto/create-consumption.dto";
 
 @Controller("consumption")
 export class ConsumptionController {
   constructor(private readonly consumptionService: ConsumptionService) {}
+
+  @Get("/daily/:date")
+  getDailyConsumption(@Param("date") date: string) {
+    return this.consumptionService.getDailyConsumption(date);
+  }
+
+  @Get("/monthly/:date")
+  getMonthlyConsumption(@Param("date") date: string) {
+    return this.consumptionService.getMonthlyConsumption(date);
+  }
+
+  @Get("/expenses/:date/monthly")
+  getExpenses(@Param("date") date: string) {
+    return this.consumptionService.getExpenses(date);
+  }
 
   @Post()
   @HttpCode(201)
