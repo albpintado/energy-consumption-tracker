@@ -1,4 +1,8 @@
 export class DateHelper {
+  static isValidDate = (date: Date) => {
+    return date instanceof Date && !isNaN(date.getTime());
+  };
+
   static getMonthRange = (dateString: string): { startDate: Date; endDate: Date } => {
     const date = new Date(dateString);
 

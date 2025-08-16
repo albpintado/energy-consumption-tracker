@@ -33,7 +33,11 @@ export class RateService {
     return this.rateRepository.update(id, updateRateDto);
   }
 
-  remove(id: number) {
-    return this.rateRepository.delete(id);
+  activate(id: number) {
+    return this.rateRepository.update(id, { endDate: null });
+  }
+
+  deactivate(id: number, endDate: string) {
+    return this.rateRepository.update(id, { endDate: new Date(endDate) });
   }
 }

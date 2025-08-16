@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { PeriodsPower } from "src/common/types/global";
 import { DiscountService } from "src/discount/discount.service";
@@ -25,8 +25,16 @@ export class ConsumptionService {
       where: { date: new Date(date) },
     });
 
-    const dailyConsumption: number = consumptions.reduce((acc, curr) => {
-      return acc + parseFloat(curr.energy.toString());
+    if (consumptions.length === 0) {
+      throw new NotFoundException();
+    }
+
+    const dailyConsumption: number = consumptions.reduce((acc, consumption) => {
+      if (!consumption.energy || isNaN(consumption.energy)) {
+        throw new BadRequestException("Invalid energy value in consumption data");
+      }
+
+      return acc + parseFloat(consumption.energy.toString());
     }, 0);
 
     return { date, energy: parseFloat(dailyConsumption.toFixed(3)) };
@@ -34,33 +42,61 @@ export class ConsumptionService {
 
   async getMonthlyConsumption(date: string) {
     const { startDate, endDate } = DateHelper.getMonthRange(date);
+
+    if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
+      throw new BadRequestException();
+    }
+
     const month = DateHelper.getMonthName(startDate.getMonth());
 
     const consumptions = await this.consumptionRepository.find({
       where: { date: Between(startDate, endDate) },
     });
 
-    const monthlyConsumption: number = consumptions.reduce((acc, curr) => {
-      return acc + parseFloat(curr.energy.toString());
+    if (consumptions.length === 0) {
+      throw new NotFoundException();
+    }
+
+    const monthlyConsumption: number = consumptions.reduce((acc, consumption) => {
+      if (!consumption.energy || isNaN(consumption.energy)) {
+        throw new BadRequestException("Invalid energy value in consumption data");
+      }
+
+      return acc + parseFloat(consumption.energy.toString());
     }, 0);
     return { month, energy: parseFloat(monthlyConsumption.toFixed(3)) };
   }
 
   async getMonthlyCost(date: string) {
     const { startDate, endDate } = DateHelper.getMonthRange(date);
+
+    if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
+      throw new BadRequestException("Invalid date range");
+    }
+
     const daysBetween = DateHelper.getDaysBetween(startDate, endDate);
+
+    if (daysBetween < 0) {
+      throw new BadRequestException("Invalid date range");
+    }
 
     const consumptions = await this.consumptionRepository.find({
       where: {
         date: Between(startDate, endDate),
       },
     });
-    const contractedPower = { peak: 3.2, standard: 3.2, offPeak: 3.2 };
+
+    if (consumptions.length === 0) {
+      throw new NotFoundException();
+    }
 
     const rate = await this.rateService.findByName("Sun Club");
     const discount = await this.discountService.findByRate(rate.id);
     const energyCost = this.getConsumptionTotalCost(consumptions, rate, discount);
+
+    const contractedPower = { peak: 3.2, standard: 3.2, offPeak: 3.2 };
     const powerCost = this.getPowerCost(contractedPower, rate, daysBetween);
+
     const totalCost = parseFloat((energyCost + powerCost).toFixed(2));
 
     return { date, energyCost, powerCost, totalCost };
@@ -84,9 +120,18 @@ export class ConsumptionService {
     rate: Rate,
     discount: Discount
   ) => {
+    if (!consumption.energy || isNaN(consumption.energy)) {
+      throw new BadRequestException("Invalid energy value in consumption data");
+    }
+
     const currentHour = consumption.hour;
 
     const period = EnergyPeriodsHelper.getPeriodByHour(currentHour);
+
+    if (!period) {
+      throw new BadRequestException("Invalid period");
+    }
+
     const periodPrice = this.getPeriodPrice(period, rate);
 
     const baseCost = consumption.energy * periodPrice;
@@ -104,7 +149,7 @@ export class ConsumptionService {
       case "offPeak":
         return rate.offPeakEnergyPrice;
       default:
-        throw new Error(`Unknown period: ${period}`);
+        throw new BadRequestException(`Unknown period: ${period}`);
     }
   };
 
@@ -125,6 +170,10 @@ export class ConsumptionService {
       daysBetween
     );
 
+    if (isNaN(peakPowerCost) || isNaN(standardPowerCost) || isNaN(offPeakPowerCost)) {
+      throw new BadRequestException("Invalid power cost values");
+    }
+
     return parseFloat((peakPowerCost + standardPowerCost + offPeakPowerCost).toFixed(2));
   };
 
@@ -137,23 +186,15 @@ export class ConsumptionService {
   };
 
   create(createConsumptionDto: CreateConsumptionDto) {
-    const consumption = new Consumption();
-    consumption.date = new Date(createConsumptionDto.date);
-    consumption.hour = createConsumptionDto.hour;
-    consumption.energy = createConsumptionDto.energy;
+    const consumption = this.consumptionRepository.create(createConsumptionDto);
 
     return this.consumptionRepository.save(consumption);
   }
 
   createAll(consumptions: CreateConsumptionDto[]) {
-    const entities: Consumption[] = consumptions.map(consumption => {
-      const entity = new Consumption();
-      entity.date = new Date(consumption.date);
-      entity.hour = consumption.hour;
-      entity.energy = consumption.energy;
-
-      return entity;
-    });
+    const entities: Consumption[] = consumptions.map(consumption =>
+      this.consumptionRepository.create(consumption)
+    );
 
     return this.consumptionRepository.save(entities);
   }

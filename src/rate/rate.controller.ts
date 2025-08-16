@@ -1,13 +1,23 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
-import { RateService } from './rate.service';
-import { CreateRateDto } from './dto/create-rate.dto';
-import { UpdateRateDto } from './dto/update-rate.dto';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Patch,
+  Post,
+} from "@nestjs/common";
+import { CreateRateDto } from "./dto/create-rate.dto";
+import { RateService } from "./rate.service";
 
-@Controller('rate')
+@Controller("rate")
 export class RateController {
   constructor(private readonly rateService: RateService) {}
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() createRateDto: CreateRateDto) {
     return this.rateService.create(createRateDto);
   }
@@ -17,18 +27,18 @@ export class RateController {
     return this.rateService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Get(":id")
+  findOne(@Param("id") id: string) {
     return this.rateService.findOne(+id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateRateDto: UpdateRateDto) {
-    return this.rateService.update(+id, updateRateDto);
+  @Patch(":id")
+  activate(@Param("id") id: string) {
+    return this.rateService.activate(+id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.rateService.remove(+id);
+  @Delete(":id")
+  remove(@Param("id") id: string, @Body("endDate") endDate: string) {
+    return this.rateService.deactivate(+id, endDate);
   }
 }

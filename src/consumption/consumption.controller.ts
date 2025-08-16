@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from "@nestjs/common";
 import { ConsumptionService } from "./consumption.service";
 import { CreateConsumptionDto } from "./dto/create-consumption.dto";
 
@@ -22,13 +22,13 @@ export class ConsumptionController {
   }
 
   @Post()
-  @HttpCode(201)
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() createConsumptionDto: CreateConsumptionDto) {
     return this.consumptionService.create(createConsumptionDto);
   }
 
   @Post("/all")
-  @HttpCode(201)
+  @HttpCode(HttpStatus.CREATED)
   createAll(@Body() consumptions: CreateConsumptionDto[]) {
     return this.consumptionService.createAll(consumptions);
   }
