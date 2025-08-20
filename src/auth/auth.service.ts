@@ -49,7 +49,9 @@ export class AuthService {
     };
   }
 
-  async login(loginDto: LoginDto): Promise<{ user: Omit<User, "passwordHash">; access_token: string }> {
+  async login(
+    loginDto: LoginDto
+  ): Promise<{ user: Omit<User, "passwordHash">; access_token: string }> {
     const { email, password } = loginDto;
 
     const user = await this.userRepository.findOne({ where: { email, isActive: true } });

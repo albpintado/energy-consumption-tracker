@@ -37,6 +37,6 @@ export const buildRate = (overrides = {}): Rate => {
   rate.offPeakPowerPrice = null;
   rate.startDate = new Date();
   rate.endDate = null;
-  
+
   return Object.assign(rate, overrides);
 };

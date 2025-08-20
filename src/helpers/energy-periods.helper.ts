@@ -1,8 +1,4 @@
-import {
-  EnergyPeriod,
-  EnergyPeriodObject,
-  EnergyPeriodRange,
-} from "src/common/types/global";
+import { EnergyPeriod, EnergyPeriodObject, EnergyPeriodRange } from "src/common/types/global";
 
 export class EnergyPeriodsHelper {
   static getPeriods = (): EnergyPeriodObject => {
@@ -52,10 +48,7 @@ export class EnergyPeriodsHelper {
     return undefined;
   };
 
-  private static isHourInRange(
-    hour: number,
-    range: EnergyPeriodRange
-  ): boolean {
+  private static isHourInRange(hour: number, range: EnergyPeriodRange): boolean {
     if (range.end === 0) {
       return hour >= range.start;
     }

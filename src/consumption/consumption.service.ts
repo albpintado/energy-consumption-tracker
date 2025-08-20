@@ -108,13 +108,16 @@ export class ConsumptionService {
     const discount = contract.rate.discounts[0] || null;
 
     const energyCost = Object.values(
-      consumptions.reduce((acc, { date, energy }) => {
-        acc[date.toString()] = acc[date.toString()] || { date, energy: 0 };
-        const newValue = acc[date.toString()].energy + +energy;
-        const newEnergy = Math.round(newValue * 1000) / 1000;
-        acc[date.toString()].energy = newEnergy;
-        return acc;
-      }, {} as { date: string; energy: number }[])
+      consumptions.reduce(
+        (acc, { date, energy }) => {
+          acc[date.toString()] = acc[date.toString()] || { date, energy: 0 };
+          const newValue = acc[date.toString()].energy + +energy;
+          const newEnergy = Math.round(newValue * 1000) / 1000;
+          acc[date.toString()].energy = newEnergy;
+          return acc;
+        },
+        {} as { date: string; energy: number }[]
+      )
     );
 
     for (let i = 1; i <= daysBetween + 1; i++) {

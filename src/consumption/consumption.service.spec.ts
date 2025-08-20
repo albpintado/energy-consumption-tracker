@@ -122,9 +122,9 @@ describe("ConsumptionService", () => {
 
       expect(contractService.validateContractOwnership).toHaveBeenCalledWith(contractId, userId);
       expect(consumptionRepository.find).toHaveBeenCalledWith({
-        where: { 
+        where: {
           date: new Date(date),
-          contract: { id: contractId }
+          contract: { id: contractId },
         },
       });
       expect(result).toEqual({
@@ -152,7 +152,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue([]);
 
-      await expect(consumptionService.getDailyConsumption(date, contractId, userId)).rejects.toThrow(NotFoundException);
+      await expect(
+        consumptionService.getDailyConsumption(date, contractId, userId)
+      ).rejects.toThrow(NotFoundException);
       expect(consumptionRepository.find).toHaveBeenCalledWith({
         where: { date: new Date(date) },
       });
@@ -164,12 +166,12 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue(consumptions);
 
-      await expect(consumptionService.getDailyConsumption(date, contractId, userId)).rejects.toThrow(
-        BadRequestException
-      );
-      await expect(consumptionService.getDailyConsumption(date, contractId, userId)).rejects.toThrow(
-        "Invalid energy value in consumption data"
-      );
+      await expect(
+        consumptionService.getDailyConsumption(date, contractId, userId)
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        consumptionService.getDailyConsumption(date, contractId, userId)
+      ).rejects.toThrow("Invalid energy value in consumption data");
     });
 
     it("should throw BadRequestException for NaN energy values", async () => {
@@ -178,9 +180,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue(consumptions);
 
-      await expect(consumptionService.getDailyConsumption(date, contractId, userId)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        consumptionService.getDailyConsumption(date, contractId, userId)
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -223,9 +225,9 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for invalid date range", async () => {
       const date = "invalid-date";
 
-      await expect(consumptionService.getMonthlyConsumption(date, contractId, userId)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        consumptionService.getMonthlyConsumption(date, contractId, userId)
+      ).rejects.toThrow(BadRequestException);
     });
 
     it("should throw NotFoundException when no consumptions found", async () => {
@@ -233,9 +235,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue([]);
 
-      await expect(consumptionService.getMonthlyConsumption(date, contractId, userId)).rejects.toThrow(
-        NotFoundException
-      );
+      await expect(
+        consumptionService.getMonthlyConsumption(date, contractId, userId)
+      ).rejects.toThrow(NotFoundException);
     });
 
     it("should throw BadRequestException for invalid energy values", async () => {
@@ -244,9 +246,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue(consumptions);
 
-      await expect(consumptionService.getMonthlyConsumption(date, contractId, userId)).rejects.toThrow(
-        BadRequestException
-      );
+      await expect(
+        consumptionService.getMonthlyConsumption(date, contractId, userId)
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -283,7 +285,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue([]);
 
-      await expect(consumptionService.getDaysOfMonthCost(date, contractId, userId)).rejects.toThrow(NotFoundException);
+      await expect(consumptionService.getDaysOfMonthCost(date, contractId, userId)).rejects.toThrow(
+        NotFoundException
+      );
     });
   });
 
@@ -321,7 +325,9 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for invalid date range", async () => {
       const date = "invalid-date";
 
-      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(BadRequestException);
+      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it("should throw NotFoundException when no consumptions found", async () => {
@@ -329,7 +335,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue([]);
 
-      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(NotFoundException);
+      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(
+        NotFoundException
+      );
     });
 
     it("should handle invalid energy values in cost calculation", async () => {
@@ -344,7 +352,9 @@ describe("ConsumptionService", () => {
 
       consumptionRepository.find.mockResolvedValue(consumptions);
 
-      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(BadRequestException);
+      await expect(consumptionService.getMonthlyCost(date, contractId, userId)).rejects.toThrow(
+        BadRequestException
+      );
     });
 
     it("should calculate costs correctly for different periods", async () => {
@@ -405,9 +415,9 @@ describe("ConsumptionService", () => {
       consumptionRepository.create.mockReturnValue(consumption);
       consumptionRepository.save.mockRejectedValue(error);
 
-      await expect(consumptionService.create(createConsumptionDto, contractId, userId)).rejects.toThrow(
-        "Database error"
-      );
+      await expect(
+        consumptionService.create(createConsumptionDto, contractId, userId)
+      ).rejects.toThrow("Database error");
     });
   });
 
@@ -443,7 +453,9 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for invalid consumption data", () => {
       const consumptionDtos = [buildCreateConsumptionDto({ date: null })];
 
-      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(BadRequestException);
+      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
+        BadRequestException
+      );
       expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
         "Invalid consumption data"
       );
@@ -452,7 +464,9 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for null hour", () => {
       const consumptionDtos = [buildCreateConsumptionDto({ hour: null })];
 
-      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(BadRequestException);
+      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
+        BadRequestException
+      );
       expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
         "Invalid consumption data"
       );
@@ -461,7 +475,9 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for null energy", () => {
       const consumptionDtos = [buildCreateConsumptionDto({ energy: null })];
 
-      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(BadRequestException);
+      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
+        BadRequestException
+      );
       expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
         "Invalid consumption data"
       );
@@ -470,8 +486,12 @@ describe("ConsumptionService", () => {
     it("should throw BadRequestException for invalid date", () => {
       const consumptionDtos = [buildCreateConsumptionDto({ date: "invalid-date" })];
 
-      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(BadRequestException);
-      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow("Invalid date");
+      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
+        BadRequestException
+      );
+      expect(() => consumptionService.createAll(consumptionDtos, contractId, userId)).toThrow(
+        "Invalid date"
+      );
     });
 
     it("should handle repository save errors", async () => {
@@ -488,7 +508,9 @@ describe("ConsumptionService", () => {
       consumptionRepository.delete.mockResolvedValue({ affected: 1 });
       consumptionRepository.save.mockRejectedValue(error);
 
-      await expect(consumptionService.createAll(consumptionDtos, contractId, userId)).rejects.toThrow("Database error");
+      await expect(
+        consumptionService.createAll(consumptionDtos, contractId, userId)
+      ).rejects.toThrow("Database error");
     });
   });
 });
