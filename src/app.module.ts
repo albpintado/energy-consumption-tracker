@@ -1,27 +1,25 @@
 import { Module } from "@nestjs/common";
+import { ConfigModule, ConfigService } from "@nestjs/config";
 import { TypeOrmModule } from "@nestjs/typeorm";
 import { AuthModule } from "./auth/auth.module";
+import appConfig from "./config/app.config";
+import databaseConfig from "./config/database.config";
 import { ConsumptionModule } from "./consumption/consumption.module";
-import { Consumption } from "./consumption/entities/consumption.entity";
 import { ContractModule } from "./contract/contract.module";
-import { Contract } from "./contract/entities/contract.entity";
 import { DiscountModule } from "./discount/discount.module";
-import { Discount } from "./discount/entities/discount.entity";
-import { Rate } from "./rate/entities/rate.entity";
 import { RateModule } from "./rate/rate.module";
-import { User } from "./user/entities/user.entity";
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: "postgres",
-      host: "localhost",
-      port: 5432,
-      username: "postgres",
-      password: "postgres",
-      database: "energy-comsumption-tracker-dev",
-      entities: [User, Contract, Consumption, Rate, Discount],
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      load: [appConfig, databaseConfig],
+      envFilePath: [`.env.${process.env.NODE_ENV || "development"}`, ".env"],
+      cache: true,
+    }),
+    TypeOrmModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => configService.get("database"),
     }),
     AuthModule,
     ContractModule,
