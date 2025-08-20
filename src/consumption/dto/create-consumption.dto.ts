@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsPositive } from "class-validator";
+import { IsNotEmpty, IsNumber, IsPositive } from "class-validator";
 
 export class CreateConsumptionDto {
   @IsNotEmpty()
@@ -10,4 +10,8 @@ export class CreateConsumptionDto {
   @IsNotEmpty()
   @IsPositive()
   energy: number;
+
+  @IsNumber()
+  @IsNotEmpty()
+  contractId: number;
 }

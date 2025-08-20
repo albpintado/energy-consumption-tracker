@@ -2,26 +2,31 @@ import {
   Column,
   CreateDateColumn,
   Entity,
-  JoinColumn,
-  ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 import { Contract } from "../../contract/entities/contract.entity";
 
 @Entity()
-export class Consumption {
+export class User {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @Column({ type: "date" })
-  date: Date;
+  @Column({ unique: true })
+  email: string;
 
-  @Column({ type: "smallint" })
-  hour: number;
+  @Column()
+  passwordHash: string;
 
-  @Column({ type: "decimal", precision: 10, scale: 3 })
-  energy: number;
+  @Column()
+  firstName: string;
+
+  @Column()
+  lastName: string;
+
+  @Column({ default: true })
+  isActive: boolean;
 
   @CreateDateColumn()
   createdAt: Date;
@@ -32,7 +37,6 @@ export class Consumption {
   @Column({ type: "timestamp", nullable: true })
   deletedAt: Date | null;
 
-  @ManyToOne(() => Contract, contract => contract.consumptions)
-  @JoinColumn({ name: "contractId" })
-  contract: Contract;
+  @OneToMany(() => Contract, contract => contract.user)
+  contracts: Contract[];
 }

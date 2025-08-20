@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { PeriodsPower } from "src/common/types/global";
-import { DiscountService } from "src/discount/discount.service";
-import { Discount } from "src/discount/entities/discount.entity";
-import { DateHelper } from "src/helpers/date.helper";
-import { EnergyPeriodsHelper } from "src/helpers/energy-periods.helper";
-import { Rate } from "src/rate/entities/rate.entity";
-import { RateService } from "src/rate/rate.service";
 import { Between, Repository } from "typeorm";
+import { PeriodsPower } from "../common/types/global";
+import { ContractService } from "../contract/contract.service";
+import { DiscountService } from "../discount/discount.service";
+import { Discount } from "../discount/entities/discount.entity";
+import { DateHelper } from "../helpers/date.helper";
+import { EnergyPeriodsHelper } from "../helpers/energy-periods.helper";
+import { Rate } from "../rate/entities/rate.entity";
+import { RateService } from "../rate/rate.service";
 import { CreateConsumptionDto } from "./dto/create-consumption.dto";
 import { Consumption } from "./entities/consumption.entity";
 
@@ -16,13 +17,19 @@ export class ConsumptionService {
   constructor(
     @InjectRepository(Consumption)
     private consumptionRepository: Repository<Consumption>,
+    private contractService: ContractService,
     private rateService: RateService,
     private discountService: DiscountService
   ) {}
 
-  async getDailyConsumption(date: string) {
+  async getDailyConsumption(date: string, contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
+
     const consumptions = await this.consumptionRepository.find({
-      where: { date: new Date(date) },
+      where: {
+        date: new Date(date),
+        contract: { id: contractId },
+      },
     });
 
     if (consumptions.length === 0) {
@@ -40,7 +47,8 @@ export class ConsumptionService {
     return { date, energy: parseFloat(dailyConsumption.toFixed(3)) };
   }
 
-  async getMonthlyConsumption(date: string) {
+  async getMonthlyConsumption(date: string, contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
     const { startDate, endDate } = DateHelper.getMonthRange(date);
 
     if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
@@ -50,7 +58,10 @@ export class ConsumptionService {
     const month = DateHelper.getMonthName(startDate.getMonth());
 
     const consumptions = await this.consumptionRepository.find({
-      where: { date: Between(startDate, endDate) },
+      where: {
+        date: Between(startDate, endDate),
+        contract: { id: contractId },
+      },
     });
 
     if (consumptions.length === 0) {
@@ -67,7 +78,8 @@ export class ConsumptionService {
     return { month, energy: parseFloat(monthlyConsumption.toFixed(3)) };
   }
 
-  async getDaysOfMonthCost(date: string) {
+  async getDaysOfMonthCost(date: string, contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
     const { startDate, endDate } = DateHelper.getMonthRange(date);
 
     if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
@@ -83,6 +95,7 @@ export class ConsumptionService {
     const consumptions = await this.consumptionRepository.find({
       where: {
         date: Between(startDate, endDate),
+        contract: { id: contractId },
       },
     });
 
@@ -90,8 +103,9 @@ export class ConsumptionService {
       throw new NotFoundException();
     }
 
-    const rate = await this.rateService.findByName("Sun Club");
-    const discount = await this.discountService.findByRate(rate.id);
+    const contract = await this.contractService.findOne(contractId, userId);
+    const rate = contract.rate;
+    const discount = contract.rate.discounts[0] || null;
 
     const energyCost = Object.values(
       consumptions.reduce((acc, { date, energy }) => {
@@ -115,7 +129,8 @@ export class ConsumptionService {
     return energyCost.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }
 
-  async getMonthlyCost(date: string) {
+  async getMonthlyCost(date: string, contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
     const { startDate, endDate } = DateHelper.getMonthRange(date);
 
     if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
@@ -131,6 +146,7 @@ export class ConsumptionService {
     const consumptions = await this.consumptionRepository.find({
       where: {
         date: Between(startDate, endDate),
+        contract: { id: contractId },
       },
     });
 
@@ -138,8 +154,9 @@ export class ConsumptionService {
       throw new NotFoundException();
     }
 
-    const rate = await this.rateService.findByName("Sun Club");
-    const discount = await this.discountService.findByRate(rate.id);
+    const contract = await this.contractService.findOne(contractId, userId);
+    const rate = contract.rate;
+    const discount = contract.rate.discounts[0] || null;
     const energyCost = this.getConsumptionTotalCost(consumptions, rate, discount);
 
     const contractedPower = { peak: 3.2, standard: 3.2, offPeak: 3.2 };
@@ -153,7 +170,7 @@ export class ConsumptionService {
   private getConsumptionTotalCost = (
     consumptions: Consumption[],
     rate: Rate,
-    discount: Discount
+    discount: Discount | null
   ): number => {
     const rawCost = consumptions.reduce(
       (acc, consumption) => acc + this.getConsumptionAfterDiscountCost(consumption, rate, discount),
@@ -166,7 +183,7 @@ export class ConsumptionService {
   private getConsumptionAfterDiscountCost = (
     consumption: Consumption,
     rate: Rate,
-    discount: Discount
+    discount: Discount | null
   ) => {
     if (!consumption.energy || isNaN(consumption.energy)) {
       throw new BadRequestException("Invalid energy value in consumption data");
@@ -183,7 +200,12 @@ export class ConsumptionService {
     const periodPrice = this.getPeriodPrice(period, rate);
 
     const baseCost = consumption.energy * periodPrice;
-    const discountCost = baseCost - (baseCost * discount.percentage) / 100;
+
+    if (!discount) {
+      return baseCost;
+    }
+
+    const discountCost = (baseCost * discount.percentage) / 100;
 
     return baseCost - discountCost;
   };
@@ -233,23 +255,33 @@ export class ConsumptionService {
     return power * (periodPowerPrice || 0) * daysBetween;
   };
 
-  create(createConsumptionDto: CreateConsumptionDto) {
-    const consumption = this.consumptionRepository.create(createConsumptionDto);
+  async create(createConsumptionDto: CreateConsumptionDto, contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
+
+    const consumption = this.consumptionRepository.create({
+      ...createConsumptionDto,
+      contract: { id: contractId },
+    });
 
     return this.consumptionRepository.save(consumption);
   }
 
-  createAll(consumptions: CreateConsumptionDto[]) {
-    const entities: Consumption[] = consumptions.map(consumption => {
-      this.deleteExistentConsumptions(consumption);
+  async createAll(consumptions: CreateConsumptionDto[], contractId: number, userId: number) {
+    await this.contractService.validateContractOwnership(contractId, userId);
 
-      return this.consumptionRepository.create(consumption);
+    const entities: Consumption[] = consumptions.map(consumption => {
+      this.deleteExistentConsumptions(consumption, contractId);
+
+      return this.consumptionRepository.create({
+        ...consumption,
+        contract: { id: contractId },
+      });
     });
 
     return this.consumptionRepository.save(entities);
   }
 
-  private deleteExistentConsumptions(consumption: CreateConsumptionDto) {
+  private deleteExistentConsumptions(consumption: CreateConsumptionDto, contractId: number) {
     if (!consumption.date || consumption.hour == null || consumption.energy == null) {
       throw new BadRequestException("Invalid consumption data");
     }
@@ -259,6 +291,10 @@ export class ConsumptionService {
       throw new BadRequestException("Invalid date");
     }
 
-    this.consumptionRepository.delete({ date, hour: consumption.hour });
+    this.consumptionRepository.delete({
+      date,
+      hour: consumption.hour,
+      contract: { id: contractId },
+    });
   }
 }

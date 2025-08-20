@@ -1,4 +1,5 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Contract } from "../../contract/entities/contract.entity";
 import { Discount } from "../../discount/entities/discount.entity";
 
 @Entity()
@@ -35,4 +36,7 @@ export class Rate {
 
   @OneToMany(() => Discount, discount => discount.rate)
   discounts: Discount[];
+
+  @OneToMany(() => Contract, contract => contract.rate)
+  contracts: Contract[];
 }
