@@ -1,13 +1,7 @@
-import {
-  Column,
-  Entity,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from "typeorm";
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { Rate } from "../../rate/entities/rate.entity";
 
-@Entity()
+@Entity({ name: "discounts" })
 export class Discount {
   @PrimaryGeneratedColumn()
   id: number;

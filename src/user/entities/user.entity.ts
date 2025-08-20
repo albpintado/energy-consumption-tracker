@@ -8,7 +8,7 @@ import {
 } from "typeorm";
 import { Contract } from "../../contract/entities/contract.entity";
 
-@Entity()
+@Entity({ name: "users" })
 export class User {
   @PrimaryGeneratedColumn()
   id: number;

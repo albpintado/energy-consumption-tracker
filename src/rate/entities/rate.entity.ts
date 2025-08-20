@@ -2,7 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Contract } from "../../contract/entities/contract.entity";
 import { Discount } from "../../discount/entities/discount.entity";
 
-@Entity()
+@Entity({ name: "rates" })
 export class Rate {
   @PrimaryGeneratedColumn()
   id: number;

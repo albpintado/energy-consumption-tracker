@@ -12,7 +12,7 @@ import { Consumption } from "../../consumption/entities/consumption.entity";
 import { Rate } from "../../rate/entities/rate.entity";
 import { User } from "../../user/entities/user.entity";
 
-@Entity()
+@Entity({ name: "contracts" })
 export class Contract {
   @PrimaryGeneratedColumn()
   id: number;
