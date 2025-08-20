@@ -21,6 +21,11 @@ export class ConsumptionController {
     return this.consumptionService.getMonthlyCost(date);
   }
 
+  @Get("/expenses/:date/days-month")
+  getDaysOfMonthCost(@Param("date") date: string) {
+    return this.consumptionService.getDaysOfMonthCost(date);
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createConsumptionDto: CreateConsumptionDto) {

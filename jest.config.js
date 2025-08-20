@@ -8,4 +8,7 @@ module.exports = {
   },
   collectCoverageFrom: ["**/*.(t|j)s"],
   coverageDirectory: "../coverage",
+  moduleNameMapper: {
+    "^src/(.*)$": "<rootDir>/$1",
+  },
 };

@@ -67,6 +67,54 @@ export class ConsumptionService {
     return { month, energy: parseFloat(monthlyConsumption.toFixed(3)) };
   }
 
+  async getDaysOfMonthCost(date: string) {
+    const { startDate, endDate } = DateHelper.getMonthRange(date);
+
+    if (!DateHelper.isValidDate(startDate) || !DateHelper.isValidDate(endDate)) {
+      throw new BadRequestException("Invalid date range");
+    }
+
+    const daysBetween = DateHelper.getDaysBetween(startDate, endDate);
+
+    if (daysBetween < 0) {
+      throw new BadRequestException("Invalid date range");
+    }
+
+    const consumptions = await this.consumptionRepository.find({
+      where: {
+        date: Between(startDate, endDate),
+      },
+    });
+
+    if (consumptions.length === 0) {
+      throw new NotFoundException();
+    }
+
+    const rate = await this.rateService.findByName("Sun Club");
+    const discount = await this.discountService.findByRate(rate.id);
+
+    const energyCost = Object.values(
+      consumptions.reduce((acc, { date, energy }) => {
+        acc[date.toString()] = acc[date.toString()] || { date, energy: 0 };
+        const newValue = acc[date.toString()].energy + +energy;
+        const newEnergy = Math.round(newValue * 1000) / 1000;
+        acc[date.toString()].energy = newEnergy;
+        return acc;
+      }, {} as { date: string; energy: number }[])
+    );
+
+    for (let i = 1; i <= daysBetween + 1; i++) {
+      const currentDate = new Date(startDate);
+      currentDate.setDate(currentDate.getDate() + i);
+      const found = energyCost.find(item => item.date === currentDate.toISOString().split("T")[0]);
+      if (!found) {
+        energyCost.push({ date: currentDate.toISOString().split("T")[0], energy: null });
+      }
+    }
+
+    return energyCost.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }
+
   async getMonthlyCost(date: string) {
     const { startDate, endDate } = DateHelper.getMonthRange(date);
 
