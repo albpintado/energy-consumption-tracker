@@ -6,7 +6,6 @@ import { DiscountModule } from "./discount/discount.module";
 import { Discount } from "./discount/entities/discount.entity";
 import { Rate } from "./rate/entities/rate.entity";
 import { RateModule } from "./rate/rate.module";
-import { ExpenseModule } from './expense/expense.module';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { ExpenseModule } from './expense/expense.module';
     ConsumptionModule,
     RateModule,
     DiscountModule,
-    ExpenseModule,
   ],
 })
 export class AppModule {}
