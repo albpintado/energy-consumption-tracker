@@ -14,6 +14,8 @@ import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { User } from "../user/entities/user.entity";
 import { ConsumptionService } from "./consumption.service";
 import { CreateConsumptionDto } from "./dto/create-consumption.dto";
+import { DashboardIndicatorsResponseDto } from "./dto/dashboard-indicators.dto";
+import { DailyHourlyConsumptionResponseDto } from "./dto/hourly-consumption.dto";
 
 @ApiTags("Consumption")
 @ApiBearerAuth()
@@ -21,6 +23,17 @@ import { CreateConsumptionDto } from "./dto/create-consumption.dto";
 @UseGuards(JwtAuthGuard)
 export class ConsumptionController {
   constructor(private readonly consumptionService: ConsumptionService) {}
+
+  @ApiOperation({ summary: "Get dashboard indicators for current and previous month" })
+  @ApiResponse({
+    status: 200,
+    description: "Dashboard indicators retrieved successfully",
+    type: DashboardIndicatorsResponseDto,
+  })
+  @Get("/dashboard-indicators")
+  getDashboardIndicators(@CurrentUser() user: User): Promise<DashboardIndicatorsResponseDto> {
+    return this.consumptionService.getDashboardIndicators(user.id);
+  }
 
   @ApiOperation({ summary: "Get daily consumption for a contract" })
   @ApiParam({ name: "contractId", description: "Contract ID" })
@@ -33,6 +46,24 @@ export class ConsumptionController {
     @CurrentUser() user: User
   ) {
     return this.consumptionService.getDailyConsumption(date, +contractId, user.id);
+  }
+
+  @ApiOperation({ summary: "Get hourly consumption for a specific day" })
+  @ApiParam({ name: "contractId", description: "Contract ID" })
+  @ApiParam({ name: "date", description: "Date in YYYY-MM-DD format" })
+  @ApiResponse({
+    status: 200,
+    description: "Hourly consumption data for the day retrieved successfully",
+    type: DailyHourlyConsumptionResponseDto,
+  })
+  @ApiResponse({ status: 404, description: "No consumption data found for the specified date" })
+  @Get("/hourly/:contractId/:date")
+  getDailyHourlyConsumption(
+    @Param("contractId") contractId: string,
+    @Param("date") date: string,
+    @CurrentUser() user: User
+  ): Promise<DailyHourlyConsumptionResponseDto> {
+    return this.consumptionService.getDailyHourlyConsumption(date, +contractId, user.id);
   }
 
   @ApiOperation({ summary: "Get monthly consumption for a contract" })
