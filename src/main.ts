@@ -17,7 +17,9 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup("api/docs", app, document);
-
+  app.enableCors({
+    origin: ["http://localhost:3001", "https://energy-consumption-tracker-app.vercel.app/"],
+  });
   await app.listen(3000);
 }
 bootstrap();
