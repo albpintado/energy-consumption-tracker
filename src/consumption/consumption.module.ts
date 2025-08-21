@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { TypeOrmModule } from "@nestjs/typeorm";
+import { Contract } from "../contract/entities/contract.entity";
 import { ContractModule } from "../contract/contract.module";
 import { DiscountService } from "../discount/discount.service";
 import { Discount } from "../discount/entities/discount.entity";
@@ -10,7 +11,7 @@ import { ConsumptionService } from "./consumption.service";
 import { Consumption } from "./entities/consumption.entity";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Consumption, Rate, Discount]), ContractModule],
+  imports: [TypeOrmModule.forFeature([Consumption, Contract, Rate, Discount]), ContractModule],
   controllers: [ConsumptionController],
   providers: [ConsumptionService, RateService, DiscountService],
   exports: [TypeOrmModule],
