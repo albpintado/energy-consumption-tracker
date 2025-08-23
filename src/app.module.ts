@@ -7,6 +7,7 @@ import databaseConfig from "./config/database.config";
 import { ConsumptionModule } from "./consumption/consumption.module";
 import { ContractModule } from "./contract/contract.module";
 import { DiscountModule } from "./discount/discount.module";
+import { HealthModule } from "./health/health.module";
 import { RateModule } from "./rate/rate.module";
 
 @Module({
@@ -26,6 +27,7 @@ import { RateModule } from "./rate/rate.module";
     ConsumptionModule,
     RateModule,
     DiscountModule,
+    HealthModule,
   ],
 })
 export class AppModule {}
